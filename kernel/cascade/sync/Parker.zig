@@ -38,19 +38,20 @@ pub fn park(parker: *Parker) void {
         return; // there were some wakeups, they might be spurious
     }
 
-    var scheduler_handle: cascade.Task.Scheduler.Handle = .get();
-    defer scheduler_handle.unlock();
-
-    // recheck for unpark attempts that happened while we were locking the scheduler
-    if (parker.unpark_attempts.swap(0, .acq_rel) != 0) {
-        @branchHint(.unlikely);
-        return;
-    }
-
     parker.lock.lock();
     if (core.is_debug) std.debug.assert(parker.parked_task == null);
 
     // recheck for unpark attempts that happened while we were locking the parker lock
+    if (parker.unpark_attempts.swap(0, .acq_rel) != 0) {
+        @branchHint(.unlikely);
+        parker.lock.unlock();
+        return;
+    }
+
+    var scheduler_handle: cascade.Task.Scheduler.Handle = .get();
+    defer scheduler_handle.unlock();
+
+    // recheck for unpark attempts that happened while we were locking the scheduler
     if (parker.unpark_attempts.swap(0, .acq_rel) != 0) {
         @branchHint(.unlikely);
         parker.lock.unlock();
