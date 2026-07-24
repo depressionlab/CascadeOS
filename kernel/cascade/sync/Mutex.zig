@@ -105,12 +105,12 @@ pub fn tryLock(mutex: *Mutex) bool {
 }
 
 pub fn unlock(mutex: *Mutex) void {
+    const current_task: cascade.Task.Current = .get();
+
     mutex.spinlock.lock();
     defer mutex.spinlock.unlock();
 
-    const current_task: cascade.Task.Current = .get();
-
-    const waiting_task = mutex.wait_queue.firstTask() orelse {
+    const waiting_task = mutex.wait_queue.pop(&mutex.spinlock) orelse {
         mutex.unlock_type = .unlocked;
 
         if (mutex.locked_by.cmpxchgStrong(
@@ -139,7 +139,7 @@ pub fn unlock(mutex: *Mutex) void {
         @panic("not locked by current task");
     }
 
-    mutex.wait_queue.wakeOne(&mutex.spinlock);
+    waiting_task.wakeFromBlocked();
 }
 
 /// Returns `true` if the mutex is locked.

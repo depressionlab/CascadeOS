@@ -148,7 +148,9 @@ pub fn readUnlock(rw_lock: *RwLock) void {
     if ((state & READER_MASK == READER) and (state & IS_WRITING != 0)) {
         rw_lock.wait_queue_spinlock.lock();
         defer rw_lock.wait_queue_spinlock.unlock();
-        rw_lock.wait_queue.wakeOne(&rw_lock.wait_queue_spinlock);
+
+        const task = rw_lock.wait_queue.pop(&rw_lock.wait_queue_spinlock) orelse return;
+        task.wakeFromBlocked();
     }
 }
 

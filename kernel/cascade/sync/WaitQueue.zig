@@ -10,40 +10,20 @@ const WaitQueue = @This();
 
 waiting_tasks: core.containers.FIFO = .{},
 
-/// Access the first task in the wait queue.
-///
-/// Does not remove the task from the wait queue.
-///
-/// Not thread-safe.
-pub fn firstTask(wait_queue: *WaitQueue) ?*cascade.Task {
-    const node = wait_queue.waiting_tasks.first_node orelse return null;
-    return .fromNode(node);
-}
-
 /// Removes the first task from the wait queue.
 ///
-/// Not thread-safe.
-pub fn popFirst(wait_queue: *WaitQueue) ?*cascade.Task {
-    const node = wait_queue.waiting_tasks.pop() orelse return null;
-    return .fromNode(node);
-}
-
-/// Wake one task from the wait queue.
-///
 /// Asserts that the spinlock is locked by the current executor and interrupts are disabled.
-pub fn wakeOne(
+pub fn pop(
     wait_queue: *WaitQueue,
     spinlock: *const cascade.sync.TicketSpinLock,
-) void {
+) ?*cascade.Task {
     if (core.is_debug) {
         std.debug.assert(cascade.Task.Current.get().task.interrupt_disable_count.load(.acquire) != 0);
         std.debug.assert(spinlock.isLockedByCurrent());
     }
 
-    const task_to_wake_node = wait_queue.waiting_tasks.pop() orelse return;
-    const task_to_wake: *cascade.Task = .fromNode(task_to_wake_node);
-
-    task_to_wake.wakeFromBlocked();
+    const node = wait_queue.waiting_tasks.pop() orelse return null;
+    return .fromNode(node);
 }
 
 /// Add the current task to the wait queue.
