@@ -19,13 +19,12 @@ container: Container align(std.atomic.cache_line) = .{ .full = 0 },
 holding_executor: ?*const cascade.Executor = null,
 
 pub fn lock(ticket_spin_lock: *TicketSpinLock) void {
-    const current_task: cascade.Task.Current = .get();
-
-    current_task.incrementInterruptDisable();
-
     if (core.is_debug) std.debug.assert(!ticket_spin_lock.isLockedByCurrent()); // recursive locks are not supported
 
     const ticket = @atomicRmw(u32, &ticket_spin_lock.container.contents.ticket, .Add, 1, .monotonic);
+
+    const current_task: cascade.Task.Current = .get();
+    current_task.incrementInterruptDisable();
 
     if (@atomicLoad(u32, &ticket_spin_lock.container.contents.current, .acquire) != ticket) {
         while (true) {
@@ -44,19 +43,15 @@ pub fn tryLock(ticket_spin_lock: *TicketSpinLock) bool {
     // no need to check if we already have the lock as the below logic will not allow us
     // to acquire it again
 
-    const current_task: cascade.Task.Current = .get();
-
-    current_task.incrementInterruptDisable();
-
     const old_container: Container = @bitCast(@atomicLoad(u64, &ticket_spin_lock.container.full, .monotonic));
 
-    if (old_container.contents.current != old_container.contents.ticket) {
-        current_task.decrementInterruptDisable();
-        return false;
-    }
+    if (old_container.contents.current != old_container.contents.ticket) return false;
 
     var new_container = old_container;
     new_container.contents.ticket +%= 1;
+
+    const current_task: cascade.Task.Current = .get();
+    current_task.incrementInterruptDisable();
 
     if (@cmpxchgStrong(
         u64,
