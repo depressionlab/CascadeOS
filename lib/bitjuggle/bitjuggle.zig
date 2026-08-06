@@ -326,8 +326,8 @@ pub fn Bitfield(
 
     const ValueType: type = std.meta.Int(.unsigned, num_bits);
 
-    return extern struct {
-        dummy: FieldType,
+    return enum(FieldType) {
+        _,
 
         const BitfieldT = @This();
 
