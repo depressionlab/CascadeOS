@@ -420,11 +420,9 @@ pub const c = struct {
     ///
     /// Freeing the memory must be done with 'nonSizedFree'.
     pub fn mallocWithNonSizedFree(size: usize) ?[*]u8 {
-        comptime std.debug.assert(standard_alignment.compare(.eq, .of(cascade.KernelVirtualRange)));
-
         const full_size = core.Size.from(size, .byte).add(.of(cascade.KernelVirtualRange));
 
-        const mem = allocator.alignedAlloc(u8, standard_alignment, full_size) catch {
+        const mem = allocator.alignedAlloc(u8, standard_alignment, full_size.value) catch {
             @branchHint(.unlikely);
             return null;
         };
@@ -442,7 +440,7 @@ pub const c = struct {
             @branchHint(.unlikely);
             return;
         };
-        allocator.rawFree(getAllocationHeader(ptr).byteSlice(), standard_alignment, @returnAddress());
+        allocator.rawFree(getAllocationHeader(@alignCast(ptr)).byteSlice(), standard_alignment, @returnAddress());
     }
 
     inline fn getAllocationHeader(ptr: [*]align(@alignOf(cascade.KernelVirtualRange)) u8) *cascade.KernelVirtualRange {
