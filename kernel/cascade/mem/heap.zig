@@ -353,7 +353,7 @@ pub const init = struct {
             const heap_region = kernel_regions.find(.kernel_heap) orelse unreachable;
 
             globals.heap_address_space_arena.addSpan(
-                heap_region.range.address.value,
+                @intFromEnum(heap_region.range.address),
                 heap_region.range.size.value,
             ) catch |err| {
                 std.debug.panic("failed to add heap range to `heap_address_space_arena`: {t}", .{err});
@@ -374,7 +374,7 @@ pub const init = struct {
 
             init_log.debug("adding special heap range to special heap address space arena", .{});
             globals.special_heap_address_space_arena.addSpan(
-                special_heap_region.range.address.value,
+                @intFromEnum(special_heap_region.range.address),
                 special_heap_region.range.size.value,
             ) catch |err| {
                 std.debug.panic(

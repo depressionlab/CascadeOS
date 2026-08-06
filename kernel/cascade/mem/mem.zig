@@ -762,7 +762,7 @@ pub const init = struct {
         globals.kernel_virtual_offset = cascade.config.mem.kernel_base_address.difference(base_address.virtual);
 
         init_globals.kernel_physical_to_virtual_offset = core.Size.from(
-            base_address.virtual.value - base_address.physical.value,
+            @intFromEnum(base_address.virtual) - @intFromEnum(base_address.physical),
             .byte,
         );
 
@@ -907,7 +907,7 @@ pub const init = struct {
 
             const virtual_range: cascade.KernelVirtualRange = .from(
                 start_address,
-                core.Size.from(end_address.value - start_address.value, .byte)
+                core.Size.from(@intFromEnum(end_address) - @intFromEnum(start_address), .byte)
                     .alignForward(arch.PageTable.standard_page_size_alignment),
             );
 
@@ -1057,7 +1057,7 @@ pub const init = struct {
                     kernel_page_table,
                     region.range.toVirtualRange(),
                     .from(
-                        .from(region.range.address.value - init_globals.kernel_physical_to_virtual_offset.value),
+                        .from(@intFromEnum(region.range.address) - init_globals.kernel_physical_to_virtual_offset.value),
                         region.range.size,
                     ),
                     switch (region.type) {

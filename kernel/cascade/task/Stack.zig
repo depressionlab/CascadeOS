@@ -152,7 +152,7 @@ pub const init = struct {
         const stacks_region = cascade.mem.kernelRegions().find(.kernel_stacks) orelse unreachable;
 
         globals.stack_arena.addSpan(
-            stacks_region.range.address.value,
+            @intFromEnum(stacks_region.range.address),
             stacks_region.range.size.value,
         ) catch |err| {
             std.debug.panic("failed to add stack range to `stack_arena`: {t}", .{err});

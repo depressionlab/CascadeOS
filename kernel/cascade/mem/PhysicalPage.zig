@@ -23,7 +23,7 @@ pub const Index = enum(u32) {
 
     /// Returns the physical page that contains the given physical address.
     pub inline fn fromAddress(physical_address: cascade.PhysicalAddress) Index {
-        return @enumFromInt(physical_address.value / arch.PageTable.standard_page_size.value);
+        return @enumFromInt(@intFromEnum(physical_address) / arch.PageTable.standard_page_size.value);
     }
 
     /// Returns the base address of the given physical page.

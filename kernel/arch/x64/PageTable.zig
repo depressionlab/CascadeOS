@@ -1119,30 +1119,30 @@ const Entry = extern union {
     }
 
     fn getAddress4kib(entry: Entry) cascade.PhysicalAddress {
-        return .{ .value = entry._address_4kib_aligned.readNoShiftFullSize() };
+        return @enumFromInt(entry._address_4kib_aligned.readNoShiftFullSize());
     }
 
     fn setAddress4kib(entry: *Entry, address: cascade.PhysicalAddress) void {
         if (core.is_debug) std.debug.assert(address.pageAligned());
-        entry._address_4kib_aligned.writeNoShiftFullSize(address.value);
+        entry._address_4kib_aligned.writeNoShiftFullSize(@intFromEnum(address));
     }
 
     fn getAddress2mib(entry: Entry) cascade.PhysicalAddress {
-        return .{ .value = entry._address_2mib_aligned.readNoShiftFullSize() };
+        return @enumFromInt(entry._address_2mib_aligned.readNoShiftFullSize());
     }
 
     fn setAddress2mib(entry: *Entry, address: cascade.PhysicalAddress) void {
         if (core.is_debug) std.debug.assert(address.aligned(medium_page_size_alignment));
-        entry._address_2mib_aligned.writeNoShiftFullSize(address.value);
+        entry._address_2mib_aligned.writeNoShiftFullSize(@intFromEnum(address));
     }
 
     fn getAddress1gib(entry: Entry) cascade.PhysicalAddress {
-        return .{ .value = entry._address_1gib_aligned.readNoShiftFullSize() };
+        return @enumFromInt(entry._address_1gib_aligned.readNoShiftFullSize());
     }
 
     fn setAddress1gib(entry: *Entry, address: cascade.PhysicalAddress) void {
         if (core.is_debug) std.debug.assert(address.aligned(large_page_size_alignment));
-        entry._address_1gib_aligned.writeNoShiftFullSize(address.value);
+        entry._address_1gib_aligned.writeNoShiftFullSize(@intFromEnum(address));
     }
 
     /// Gets the next page table level.

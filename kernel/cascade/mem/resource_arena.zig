@@ -970,14 +970,14 @@ pub const Allocation = struct {
 
     pub inline fn toVirtualRange(self: Allocation) cascade.KernelVirtualRange {
         return .{
-            .address = .{ .value = self.base },
+            .address = .from(self.base),
             .size = .from(self.len, .byte),
         };
     }
 
     pub inline fn fromVirtualRange(range: cascade.KernelVirtualRange) Allocation {
         return .{
-            .base = range.address.value,
+            .base = @intFromEnum(range.address),
             .len = range.size.value,
         };
     }

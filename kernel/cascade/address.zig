@@ -32,9 +32,9 @@ pub const VirtualAddress = extern union {
     /// Returns the type of memory this address points to.
     pub fn tagged(address: VirtualAddress) Tagged {
         if (arch.kernel_memory_range.containsAddress(address))
-            return .{ .kernel = .{ .value = address.value } }
+            return .{ .kernel = .from(address.value) }
         else if (arch.user_memory_range.containsAddress(address))
-            return .{ .user = .{ .value = address.value } }
+            return .{ .user = .from(address.value) }
         else {
             @branchHint(.cold);
             return .invalid;
@@ -95,15 +95,15 @@ pub const VirtualAddress = extern union {
     }
 };
 
-pub const KernelVirtualAddress = extern struct {
-    value: usize,
+pub const KernelVirtualAddress = enum(usize) {
+    _,
 
     /// Creates a new kernel virtual address from a raw value.
     ///
     /// **REQUIREMENTS**:
     /// - The address must be within the kernel memory range.
     pub inline fn from(value: usize) KernelVirtualAddress {
-        const address: KernelVirtualAddress = .{ .value = value };
+        const address: KernelVirtualAddress = @enumFromInt(value);
         if (core.is_debug) std.debug.assert(arch.kernel_memory_range.containsAddress(address.toVirtualAddress()));
         return address;
     }
@@ -117,7 +117,7 @@ pub const KernelVirtualAddress = extern struct {
             const pointer_type_info = @typeInfo(@TypeOf(ptr)).pointer;
             std.debug.assert(pointer_type_info.size == .one or pointer_type_info.size == .many);
         }
-        return .{ .value = @intFromPtr(ptr) };
+        return .from(@intFromPtr(ptr));
     }
 
     /// Converts the kernel virtual address to a pointer.
@@ -125,7 +125,7 @@ pub const KernelVirtualAddress = extern struct {
     /// **REQUIREMENTS**:
     /// - The pointer must be a valid kernel pointer.
     pub inline fn toPtr(address: KernelVirtualAddress, comptime PtrT: type) PtrT {
-        return @ptrFromInt(address.value);
+        return @ptrFromInt(@intFromEnum(address));
     }
 
     pub inline fn toVirtualAddress(address: KernelVirtualAddress) VirtualAddress {
@@ -175,16 +175,16 @@ pub const KernelVirtualAddress = extern struct {
     }
 };
 
-pub const UserVirtualAddress = extern struct {
-    value: usize,
+pub const UserVirtualAddress = enum(usize) {
+    _,
 
     /// Creates a new user virtual address from a raw value.
     ///
     /// **REQUIREMENTS**:
     /// - The address must be within the user memory range.
     pub inline fn from(value: usize) UserVirtualAddress {
-        const address: UserVirtualAddress = .{ .value = value };
-        if (core.is_debug) std.debug.assert(arch.user.user_memory_range.containsAddress(address.toVirtualAddress()));
+        const address: UserVirtualAddress = @enumFromInt(value);
+        if (core.is_debug) std.debug.assert(arch.user_memory_range.containsAddress(address.toVirtualAddress()));
         return address;
     }
 
@@ -193,7 +193,7 @@ pub const UserVirtualAddress = extern struct {
     /// **REQUIREMENTS**:
     /// - The current task must have enabled access to user memory to read or write to this pointer.
     pub inline fn ptr(address: UserVirtualAddress, comptime PtrT: type) PtrT {
-        return @ptrFromInt(address.value);
+        return @ptrFromInt(@intFromEnum(address));
     }
 
     pub inline fn toVirtualAddress(address: UserVirtualAddress) VirtualAddress {
@@ -236,13 +236,13 @@ pub const UserVirtualAddress = extern struct {
     }
 };
 
-pub const PhysicalAddress = extern struct {
-    value: usize,
+pub const PhysicalAddress = enum(usize) {
+    zero = 0,
 
-    pub const zero: PhysicalAddress = .from(0);
+    _,
 
     pub inline fn from(value: usize) PhysicalAddress {
-        return .{ .value = value };
+        return @enumFromInt(value);
     }
 
     /// Returns the physical address of this direct map virtual address.
@@ -251,7 +251,7 @@ pub const PhysicalAddress = extern struct {
     /// - The provided `address` is in the direct map.
     pub inline fn fromDirectMap(direct_map_address: KernelVirtualAddress) PhysicalAddress {
         if (core.is_debug) std.debug.assert(cascade.mem.globals.direct_map.containsAddress(direct_map_address));
-        return .{ .value = direct_map_address.value - cascade.mem.globals.direct_map.address.value };
+        return @enumFromInt(@intFromEnum(direct_map_address) - @intFromEnum(cascade.mem.globals.direct_map.address));
     }
 
     /// Returns the direct map virtual address corresponding to this physical address.
@@ -259,7 +259,9 @@ pub const PhysicalAddress = extern struct {
     /// **REQUIREMENTS**:
     /// - The provided `address` is covered by the direct map.
     pub inline fn toDirectMap(physical_address: PhysicalAddress) KernelVirtualAddress {
-        const direct_map_address: KernelVirtualAddress = .{ .value = physical_address.value + cascade.mem.globals.direct_map.address.value };
+        const direct_map_address: KernelVirtualAddress = @enumFromInt(
+            @intFromEnum(physical_address) + @intFromEnum(cascade.mem.globals.direct_map.address),
+        );
         if (core.is_debug) std.debug.assert(cascade.mem.globals.direct_map.containsAddress(direct_map_address));
         return direct_map_address;
     }
@@ -396,7 +398,7 @@ pub const KernelVirtualRange = struct {
     /// **REQUIREMENTS**:
     /// - The slice must be fully contained in kernel memory.
     pub inline fn fromSlice(comptime T: type, slice: []const T) KernelVirtualRange {
-        return .from(.{ .value = @intFromPtr(slice.ptr) }, core.Size.of(T).multiplyScalar(slice.len));
+        return .from(.fromPtr(slice.ptr), core.Size.of(T).multiplyScalar(slice.len));
     }
 
     /// Creates a new kernel virtual range from a pointer.
@@ -404,12 +406,8 @@ pub const KernelVirtualRange = struct {
     /// **REQUIREMENTS**:
     /// - The pointer must be a valid kernel pointer.
     pub inline fn fromPtr(ptr: anytype) KernelVirtualRange {
-        const T = comptime blk: {
-            const pointer_type_info = @typeInfo(@TypeOf(ptr)).pointer;
-            std.debug.assert(pointer_type_info.size == .one);
-            break :blk pointer_type_info.child;
-        };
-        return .from(.{ .value = @intFromPtr(ptr) }, .of(T));
+        const T = @typeInfo(@TypeOf(ptr)).pointer.child;
+        return .from(.fromPtr(ptr), .of(T));
     }
 
     pub inline fn toVirtualRange(range: KernelVirtualRange) VirtualRange {
@@ -539,95 +537,95 @@ pub const PhysicalRange = struct {
 fn AddressMixin(comptime Address: type) type {
     return struct {
         inline fn aligned(address: Address, alignment: std.mem.Alignment) bool {
-            return alignment.check(address.value);
+            return alignment.check(toValue(address));
         }
 
         inline fn pageAligned(address: Address) bool {
-            return arch.PageTable.standard_page_size_alignment.check(address.value);
+            return address.aligned(arch.PageTable.standard_page_size_alignment);
         }
 
         inline fn alignForward(address: Address, alignment: std.mem.Alignment) Address {
-            return .{ .value = alignment.forward(address.value) };
+            return fromValue(alignment.forward(toValue(address)));
         }
 
         inline fn pageAlignForward(address: Address) Address {
-            return .{ .value = arch.PageTable.standard_page_size_alignment.forward(address.value) };
+            return address.alignForward(arch.PageTable.standard_page_size_alignment);
         }
 
         inline fn alignForwardInPlace(address: *Address, alignment: std.mem.Alignment) void {
-            address.value = alignment.forward(address.value);
+            address.* = fromValue(alignment.forward(toValue(address.*)));
         }
 
         inline fn pageAlignForwardInPlace(address: *Address) void {
-            address.value = arch.PageTable.standard_page_size_alignment.forward(address.value);
+            address.alignForwardInPlace(arch.PageTable.standard_page_size_alignment);
         }
 
         inline fn alignBackward(address: Address, alignment: std.mem.Alignment) Address {
-            return .{ .value = alignment.backward(address.value) };
+            return fromValue(alignment.backward(toValue(address)));
         }
 
         inline fn pageAlignBackward(address: Address) Address {
-            return .{ .value = arch.PageTable.standard_page_size_alignment.backward(address.value) };
+            return address.alignBackward(arch.PageTable.standard_page_size_alignment);
         }
 
         inline fn alignBackwardInPlace(address: *Address, alignment: std.mem.Alignment) void {
-            address.value = alignment.backward(address.value);
+            address.* = fromValue(alignment.backward(toValue(address.*)));
         }
 
         inline fn pageAlignBackwardInPlace(address: *Address) void {
-            address.value = arch.PageTable.standard_page_size_alignment.backward(address.value);
+            address.alignBackwardInPlace(arch.PageTable.standard_page_size_alignment);
         }
 
         inline fn moveForward(address: Address, size: core.Size) Address {
-            return .{ .value = address.value + size.value };
+            return fromValue(toValue(address) + size.value);
         }
 
         inline fn moveForwardPage(address: Address) Address {
-            return .{ .value = address.value + arch.PageTable.standard_page_size.value };
+            return address.moveForward(arch.PageTable.standard_page_size);
         }
 
         inline fn moveForwardInPlace(address: *Address, size: core.Size) void {
-            address.value += size.value;
+            address.* = fromValue(toValue(address.*) + size.value);
         }
 
         inline fn moveForwardPageInPlace(address: *Address) void {
-            address.value += arch.PageTable.standard_page_size.value;
+            address.moveForwardInPlace(arch.PageTable.standard_page_size);
         }
 
         inline fn moveBackward(address: Address, size: core.Size) Address {
-            return .{ .value = address.value - size.value };
+            return fromValue(toValue(address) - size.value);
         }
 
         inline fn moveBackwardPage(address: Address) Address {
-            return .{ .value = address.value - arch.PageTable.standard_page_size.value };
+            return address.moveBackward(arch.PageTable.standard_page_size);
         }
 
         inline fn moveBackwardInPlace(address: *Address, size: core.Size) void {
-            address.value -= size.value;
+            address.* = fromValue(toValue(address.*) - size.value);
         }
 
         inline fn moveBackwardPageInPlace(address: *Address) void {
-            address.value -= arch.PageTable.standard_page_size.value;
+            address.moveBackwardInPlace(arch.PageTable.standard_page_size);
         }
 
         inline fn equal(address: Address, other: Address) bool {
-            return address.value == other.value;
+            return toValue(address) == toValue(other);
         }
 
         inline fn lessThan(address: Address, other: Address) bool {
-            return address.value < other.value;
+            return toValue(address) < toValue(other);
         }
 
         inline fn lessThanOrEqual(address: Address, other: Address) bool {
-            return address.value <= other.value;
+            return toValue(address) <= toValue(other);
         }
 
         inline fn greaterThan(address: Address, other: Address) bool {
-            return address.value > other.value;
+            return toValue(address) > toValue(other);
         }
 
         inline fn greaterThanOrEqual(address: Address, other: Address) bool {
-            return address.value >= other.value;
+            return toValue(address) >= toValue(other);
         }
 
         /// Returns the size from  `address` to `other`.
@@ -638,7 +636,7 @@ fn AddressMixin(comptime Address: type) type {
         /// - `other` must be greater than or equal to `address`
         inline fn difference(address: Address, other: Address) core.Size {
             if (core.is_debug) std.debug.assert(greaterThanOrEqual(other, address));
-            return .from(other.value - address.value, .byte);
+            return .from(toValue(other) - toValue(address), .byte);
         }
 
         fn format(address: Address, writer: *std.Io.Writer) !void {
@@ -652,7 +650,7 @@ fn AddressMixin(comptime Address: type) type {
 
             try writer.writeAll(comptime name ++ "{ 0x");
             try writer.printInt(
-                address.value,
+                toValue(address),
                 16,
                 .lower,
                 .{
@@ -661,6 +659,22 @@ fn AddressMixin(comptime Address: type) type {
                 },
             );
             try writer.writeAll(" }");
+        }
+
+        inline fn fromValue(value: usize) Address {
+            return switch (Address) {
+                VirtualAddress => .{ .value = value },
+                KernelVirtualAddress, UserVirtualAddress, PhysicalAddress => @enumFromInt(value),
+                else => unreachable,
+            };
+        }
+
+        inline fn toValue(address: Address) usize {
+            return switch (Address) {
+                VirtualAddress => address.value,
+                KernelVirtualAddress, UserVirtualAddress, PhysicalAddress => @intFromEnum(address),
+                else => unreachable,
+            };
         }
     };
 }
@@ -758,7 +772,7 @@ fn RangeMixin(comptime Range: type) type {
 
             try writer.writeAll(comptime name ++ "{ 0x");
             try writer.printInt(
-                range.address.value,
+                Range.Address.Mixin.toValue(range.address),
                 16,
                 .lower,
                 .{
@@ -768,7 +782,7 @@ fn RangeMixin(comptime Range: type) type {
             );
             try writer.writeAll(" - 0x");
             try writer.printInt(
-                range.last().value,
+                Range.Address.Mixin.toValue(range.last()),
                 16,
                 .lower,
                 .{
