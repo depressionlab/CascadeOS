@@ -23,12 +23,12 @@ pub const Index = enum(u32) {
 
     /// Returns the physical page that contains the given physical address.
     pub inline fn fromAddress(physical_address: cascade.PhysicalAddress) Index {
-        return @enumFromInt(@intFromEnum(physical_address) / arch.PageTable.standard_page_size.value);
+        return @enumFromInt(@intFromEnum(physical_address) / @intFromEnum(arch.PageTable.standard_page_size));
     }
 
     /// Returns the base address of the given physical page.
     pub inline fn baseAddress(index: Index) cascade.PhysicalAddress {
-        return .from(@intFromEnum(index) * arch.PageTable.standard_page_size.value);
+        return .from(@intFromEnum(index) * @intFromEnum(arch.PageTable.standard_page_size));
     }
 
     pub inline fn range(index: Index) cascade.PhysicalRange {
@@ -55,7 +55,7 @@ fn allocate() Allocator.AllocateError!Index {
     const index = globals.free_page_list.popFirst() orelse return error.PagesExhausted;
 
     _ = globals.free_memory.fetchSub(
-        arch.PageTable.standard_page_size.value,
+        @intFromEnum(arch.PageTable.standard_page_size),
         .release,
     );
 
@@ -78,7 +78,7 @@ fn deallocate(list: List) void {
     }
 
     _ = globals.free_memory.fetchAdd(
-        arch.PageTable.standard_page_size.multiplyScalar(list.count).value,
+        @intFromEnum(arch.PageTable.standard_page_size.multiplyScalar(list.count)),
         .release,
     );
 
@@ -444,7 +444,7 @@ pub const init = struct {
             }
         }
 
-        globals.free_memory.store(free_memory.value, .release);
+        globals.free_memory.store(@intFromEnum(free_memory), .release);
         globals.total_memory = total_memory;
         globals.reserved_memory = reserved_memory;
         globals.reclaimable_memory = reclaimable_memory;

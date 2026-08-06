@@ -135,8 +135,8 @@ pub const init = struct {
     /// Prepares this executor as the bootstrap executor.
     pub fn prepareBootstrap(executor: *cascade.Executor, id: Id) void {
         const static = struct {
-            var bootstrap_double_fault_stack: [cascade.config.task.kernel_stack_size.value]u8 align(16) = undefined;
-            var bootstrap_non_maskable_interrupt_stack: [cascade.config.task.kernel_stack_size.value]u8 align(16) = undefined;
+            var bootstrap_double_fault_stack: [@intFromEnum(cascade.config.task.kernel_stack_size)]u8 align(16) = undefined;
+            var bootstrap_non_maskable_interrupt_stack: [@intFromEnum(cascade.config.task.kernel_stack_size)]u8 align(16) = undefined;
         };
 
         prepareShared(

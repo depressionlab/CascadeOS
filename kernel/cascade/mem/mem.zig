@@ -796,8 +796,8 @@ pub const init = struct {
             init_log.debug("kernel memory offsets:", .{});
 
             init_log.debug("  virtual base address:       {f}", .{globals.virtual_base_address});
-            init_log.debug("  virtual offset:             0x{x:0>16}", .{globals.kernel_virtual_offset.value});
-            init_log.debug("  physical to virtual:        0x{x:0>16}", .{init_globals.kernel_physical_to_virtual_offset.value});
+            init_log.debug("  virtual offset:             0x{x:0>16}", .{@intFromEnum(globals.kernel_virtual_offset)});
+            init_log.debug("  physical to virtual:        0x{x:0>16}", .{@intFromEnum(init_globals.kernel_physical_to_virtual_offset)});
             init_log.debug("  direct map:                 {f}", .{globals.direct_map});
         }
     };
@@ -1057,7 +1057,7 @@ pub const init = struct {
                     kernel_page_table,
                     region.range.toVirtualRange(),
                     .from(
-                        .from(@intFromEnum(region.range.address) - init_globals.kernel_physical_to_virtual_offset.value),
+                        .from(@intFromEnum(region.range.address) - @intFromEnum(init_globals.kernel_physical_to_virtual_offset)),
                         region.range.size,
                     ),
                     switch (region.type) {

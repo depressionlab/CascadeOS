@@ -19,7 +19,7 @@ pub fn getFunction(address: Address) ?*Function {
             @as(usize, address.device) << 15 |
             @as(usize, address.function) << 12;
 
-        std.debug.assert(ecam.config_space.size.value >= config_space_offset + @sizeOf(Function));
+        std.debug.assert(@intFromEnum(ecam.config_space.size) >= config_space_offset + @sizeOf(Function));
 
         return ecam.config_space.address
             .moveForward(.from(config_space_offset, .byte))
@@ -67,7 +67,7 @@ pub const DeviceID = enum(u16) {
 };
 
 pub const Function = extern struct {
-    full_configuration_space: [enhanced_configuration_space_size.value]u8 align(enhanced_configuration_space_size.value),
+    full_configuration_space: [@intFromEnum(enhanced_configuration_space_size)]u8 align(@intFromEnum(enhanced_configuration_space_size)),
 
     pub const enhanced_configuration_space_size: core.Size = .from(4096, .byte);
 

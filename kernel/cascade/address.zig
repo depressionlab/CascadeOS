@@ -422,7 +422,7 @@ pub const KernelVirtualRange = struct {
     /// **REQUIREMENTS**:
     /// - The range must be fully contained in kernel memory.
     pub inline fn byteSlice(range: KernelVirtualRange) []u8 {
-        return range.address.toPtr([*]u8)[0..range.size.value];
+        return range.address.toPtr([*]u8)[0..@intFromEnum(range.size)];
     }
 
     pub const pageAligned: fn (range: @This()) callconv(.@"inline") bool = Mixin.pageAligned;
@@ -577,7 +577,7 @@ fn AddressMixin(comptime Address: type) type {
         }
 
         inline fn moveForward(address: Address, size: core.Size) Address {
-            return fromValue(toValue(address) + size.value);
+            return fromValue(toValue(address) + @intFromEnum(size));
         }
 
         inline fn moveForwardPage(address: Address) Address {
@@ -585,7 +585,7 @@ fn AddressMixin(comptime Address: type) type {
         }
 
         inline fn moveForwardInPlace(address: *Address, size: core.Size) void {
-            address.* = fromValue(toValue(address.*) + size.value);
+            address.* = fromValue(toValue(address.*) + @intFromEnum(size));
         }
 
         inline fn moveForwardPageInPlace(address: *Address) void {
@@ -593,7 +593,7 @@ fn AddressMixin(comptime Address: type) type {
         }
 
         inline fn moveBackward(address: Address, size: core.Size) Address {
-            return fromValue(toValue(address) - size.value);
+            return fromValue(toValue(address) - @intFromEnum(size));
         }
 
         inline fn moveBackwardPage(address: Address) Address {
@@ -601,7 +601,7 @@ fn AddressMixin(comptime Address: type) type {
         }
 
         inline fn moveBackwardInPlace(address: *Address, size: core.Size) void {
-            address.* = fromValue(toValue(address.*) - size.value);
+            address.* = fromValue(toValue(address.*) - @intFromEnum(size));
         }
 
         inline fn moveBackwardPageInPlace(address: *Address) void {

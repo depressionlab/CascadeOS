@@ -532,7 +532,7 @@ pub const PageTable = struct {
             if (core.is_debug) {
                 const size = sizeOfTopLevelEntry();
                 std.debug.assert(range.size.equal(size));
-                std.debug.assert(range.address.aligned(.fromByteUnits(size.value)));
+                std.debug.assert(range.address.aligned(.fromByteUnits(@intFromEnum(size))));
             }
 
             return getFunction(

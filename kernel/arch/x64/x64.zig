@@ -48,7 +48,7 @@ pub fn safeMemcpy(
         : [target] "r" (target),
           [source_ptr] "+{rsi}" (source.address.value),
           [destination_ptr] "+{rdi}" (destination.address.value),
-          [count] "+{rcx}" (source.size.value),
+          [count] "+{rcx}" (source.size),
         : .{
           .rax = true,
           .rsi = true,

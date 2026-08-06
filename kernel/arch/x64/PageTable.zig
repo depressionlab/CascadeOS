@@ -12,7 +12,7 @@ const core = @import("core");
 const x64 = @import("x64.zig");
 
 pub const PageTable = extern struct {
-    _entries: [number_of_entries]Entry.Raw align(small_page_size.value),
+    _entries: [number_of_entries]Entry.Raw align(@intFromEnum(small_page_size)),
 
     pub const number_of_entries = 512;
 

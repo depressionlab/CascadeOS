@@ -337,8 +337,8 @@ pub const RawCache = struct {
                 switch (raw_cache.size_class) {
                     .small => {
                         const item_node_ptr: [*]u8 = @ptrCast(item_node);
-                        const item_ptr = item_node_ptr - raw_cache.item_size.alignForward(single_node_alignment).value;
-                        allocated_items.appendAssumeCapacity(item_ptr[0..raw_cache.item_size.value]);
+                        const item_ptr = item_node_ptr - @intFromEnum(raw_cache.item_size.alignForward(single_node_alignment));
+                        allocated_items.appendAssumeCapacity(item_ptr[0..@intFromEnum(raw_cache.item_size)]);
                     },
                     .large => |*large| {
                         const large_item: *LargeItem = @fieldParentPtr("node", item_node);
@@ -401,7 +401,7 @@ pub const RawCache = struct {
                 const slab_base_ptr: [*]u8 = switch (raw_cache.slab_source) {
                     .heap => slab_base_ptr: {
                         const slab_allocation = cascade.mem.heap.heap_page_arena.allocate(
-                            arch.PageTable.standard_page_size.value,
+                            @intFromEnum(arch.PageTable.standard_page_size),
                             .instant_fit,
                         ) catch return AllocateError.SlabAllocationFailed;
                         break :slab_base_ptr @ptrFromInt(slab_allocation.base);
@@ -412,7 +412,7 @@ pub const RawCache = struct {
 
                         const slab_base_ptr = physical_page.baseAddress().toDirectMap().toPtr([*]u8);
 
-                        if (core.is_debug) @memset(slab_base_ptr[0..arch.PageTable.standard_page_size.value], undefined);
+                        if (core.is_debug) @memset(slab_base_ptr[0..@intFromEnum(arch.PageTable.standard_page_size)], undefined);
 
                         break :slab_base_ptr slab_base_ptr;
                     },
@@ -421,7 +421,7 @@ pub const RawCache = struct {
                 errdefer switch (raw_cache.slab_source) {
                     .heap => cascade.mem.heap.heap_page_arena.deallocate(.{
                         .base = @intFromPtr(slab_base_ptr),
-                        .len = arch.PageTable.standard_page_size.value,
+                        .len = @intFromEnum(arch.PageTable.standard_page_size),
                     }),
                     .pmm => {
                         var deallocate_page_list: cascade.mem.PhysicalPage.List = .{};
@@ -433,7 +433,7 @@ pub const RawCache = struct {
                 };
 
                 const slab: *Slab = @ptrCast(@alignCast(
-                    slab_base_ptr + arch.PageTable.standard_page_size.value - @sizeOf(Slab),
+                    slab_base_ptr + @intFromEnum(arch.PageTable.standard_page_size) - @sizeOf(Slab),
                 ));
                 slab.* = .{
                     .large_item_allocation = undefined,
@@ -445,27 +445,27 @@ pub const RawCache = struct {
                     errdefer { // call the destructor for any items that the constructor was called on
                         const destructor = con_des.destructor;
                         for (0..i) |y| {
-                            const item_ptr = slab_base_ptr + raw_cache.effective_item_size.multiplyScalar(y).value;
-                            destructor(item_ptr[0..raw_cache.item_size.value]);
+                            const item_ptr = slab_base_ptr + @intFromEnum(raw_cache.effective_item_size.multiplyScalar(y));
+                            destructor(item_ptr[0..@intFromEnum(raw_cache.item_size)]);
                         }
                     }
 
                     const constructor = con_des.constructor;
 
                     while (i < raw_cache.items_per_slab) : (i += 1) {
-                        const item_ptr = slab_base_ptr + raw_cache.effective_item_size.multiplyScalar(i).value;
+                        const item_ptr = slab_base_ptr + @intFromEnum(raw_cache.effective_item_size.multiplyScalar(i));
 
-                        try constructor(item_ptr[0..raw_cache.item_size.value]);
+                        try constructor(item_ptr[0..@intFromEnum(raw_cache.item_size)]);
 
                         slab.items.prepend(@ptrCast(@alignCast(
-                            item_ptr + raw_cache.item_size.alignForward(single_node_alignment).value,
+                            item_ptr + @intFromEnum(raw_cache.item_size.alignForward(single_node_alignment)),
                         )));
                     }
                 } else {
                     for (0..raw_cache.items_per_slab) |i| {
-                        const item_ptr = slab_base_ptr + raw_cache.effective_item_size.multiplyScalar(i).value;
+                        const item_ptr = slab_base_ptr + @intFromEnum(raw_cache.effective_item_size.multiplyScalar(i));
                         slab.items.prepend(@ptrCast(@alignCast(
-                            item_ptr + raw_cache.item_size.alignForward(single_node_alignment).value,
+                            item_ptr + @intFromEnum(raw_cache.item_size.alignForward(single_node_alignment)),
                         )));
                     }
                 }
@@ -474,7 +474,7 @@ pub const RawCache = struct {
             },
             .large => slab: {
                 const large_item_allocation = cascade.mem.heap.heap_page_arena.allocate(
-                    raw_cache.effective_item_size.multiplyScalar(raw_cache.items_per_slab).value,
+                    @intFromEnum(raw_cache.effective_item_size.multiplyScalar(raw_cache.items_per_slab)),
                     .instant_fit,
                 ) catch return AllocateError.SlabAllocationFailed;
                 errdefer cascade.mem.heap.heap_page_arena.deallocate(large_item_allocation);
@@ -509,8 +509,8 @@ pub const RawCache = struct {
                         const large_item = try globals.large_item_cache.allocate();
                         errdefer globals.large_item_cache.deallocate(large_item);
 
-                        const item_ptr: [*]u8 = items_base + raw_cache.effective_item_size.multiplyScalar(i).value;
-                        const item: []u8 = item_ptr[0..raw_cache.item_size.value];
+                        const item_ptr: [*]u8 = items_base + @intFromEnum(raw_cache.effective_item_size.multiplyScalar(i));
+                        const item: []u8 = item_ptr[0..@intFromEnum(raw_cache.item_size)];
 
                         large_item.* = .{
                             .item = item,
@@ -530,8 +530,8 @@ pub const RawCache = struct {
                     for (0..raw_cache.items_per_slab) |i| {
                         const large_item = try globals.large_item_cache.allocate();
 
-                        const item_ptr: [*]u8 = items_base + raw_cache.effective_item_size.multiplyScalar(i).value;
-                        const item: []u8 = item_ptr[0..raw_cache.item_size.value];
+                        const item_ptr: [*]u8 = items_base + @intFromEnum(raw_cache.effective_item_size.multiplyScalar(i));
+                        const item: []u8 = item_ptr[0..@intFromEnum(raw_cache.item_size)];
 
                         large_item.* = .{
                             .item = item,
@@ -574,13 +574,13 @@ pub const RawCache = struct {
                     const page_start = std.mem.alignBackward(
                         usize,
                         @intFromPtr(item.ptr),
-                        arch.PageTable.standard_page_size.value,
+                        @intFromEnum(arch.PageTable.standard_page_size),
                     );
 
-                    const slab: *Slab = @ptrFromInt(page_start + arch.PageTable.standard_page_size.value - @sizeOf(Slab));
+                    const slab: *Slab = @ptrFromInt(page_start + @intFromEnum(arch.PageTable.standard_page_size) - @sizeOf(Slab));
 
                     const item_node: *std.SinglyLinkedList.Node = @ptrCast(@alignCast(
-                        item.ptr + raw_cache.item_size.alignForward(single_node_alignment).value,
+                        item.ptr + @intFromEnum(raw_cache.item_size.alignForward(single_node_alignment)),
                     ));
 
                     break :blk .{ slab, item_node };
@@ -643,13 +643,13 @@ pub const RawCache = struct {
         switch (raw_cache.size_class) {
             .small => {
                 const slab_info_ptr: [*]u8 = @ptrCast(slab);
-                const slab_base_ptr: [*]u8 = slab_info_ptr + @sizeOf(Slab) - arch.PageTable.standard_page_size.value;
+                const slab_base_ptr: [*]u8 = slab_info_ptr + @sizeOf(Slab) - @intFromEnum(arch.PageTable.standard_page_size);
 
                 if (raw_cache.construct_destruct) |con_des| {
                     const destructor = con_des.destructor;
                     for (0..raw_cache.items_per_slab) |i| {
-                        const item_ptr = slab_base_ptr + raw_cache.effective_item_size.multiplyScalar(i).value;
-                        destructor(item_ptr[0..raw_cache.item_size.value]);
+                        const item_ptr = slab_base_ptr + @intFromEnum(raw_cache.effective_item_size.multiplyScalar(i));
+                        destructor(item_ptr[0..@intFromEnum(raw_cache.item_size)]);
                     }
                 }
 
@@ -657,7 +657,7 @@ pub const RawCache = struct {
                     .heap => cascade.mem.heap.heap_page_arena.deallocate(
                         .{
                             .base = @intFromPtr(slab_base_ptr),
-                            .len = arch.PageTable.standard_page_size.value,
+                            .len = @intFromEnum(arch.PageTable.standard_page_size),
                         },
                     ),
                     .pmm => {

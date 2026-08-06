@@ -40,7 +40,7 @@ pub fn allocateSpecial(
     const page_aligned_physical_range = options.physical_range.pageAlign();
 
     const allocation = globals.special_heap_address_space_arena.allocate(
-        page_aligned_physical_range.size.value,
+        @intFromEnum(page_aligned_physical_range.size),
         .instant_fit,
     ) catch |err| {
         @branchHint(.cold);
@@ -325,7 +325,7 @@ pub const init = struct {
             try globals.heap_address_space_arena.init(
                 .{
                     .name = try .fromSlice("heap_address_space"),
-                    .quantum = arch.PageTable.standard_page_size.value,
+                    .quantum = @intFromEnum(arch.PageTable.standard_page_size),
                 },
             );
 
@@ -333,7 +333,7 @@ pub const init = struct {
             try globals.heap_page_arena.init(
                 .{
                     .name = try .fromSlice("heap_page"),
-                    .quantum = arch.PageTable.standard_page_size.value,
+                    .quantum = @intFromEnum(arch.PageTable.standard_page_size),
                     .source = globals.heap_address_space_arena.createSource(.{
                         .custom_import = allocator_impl.heapPageArenaImport,
                         .custom_release = allocator_impl.heapPageArenaRelease,
@@ -354,7 +354,7 @@ pub const init = struct {
 
             globals.heap_address_space_arena.addSpan(
                 @intFromEnum(heap_region.range.address),
-                heap_region.range.size.value,
+                @intFromEnum(heap_region.range.size),
             ) catch |err| {
                 std.debug.panic("failed to add heap range to `heap_address_space_arena`: {t}", .{err});
             };
@@ -366,7 +366,7 @@ pub const init = struct {
             try globals.special_heap_address_space_arena.init(
                 .{
                     .name = try .fromSlice("special_heap_address_space"),
-                    .quantum = arch.PageTable.standard_page_size.value,
+                    .quantum = @intFromEnum(arch.PageTable.standard_page_size),
                 },
             );
 
@@ -375,7 +375,7 @@ pub const init = struct {
             init_log.debug("adding special heap range to special heap address space arena", .{});
             globals.special_heap_address_space_arena.addSpan(
                 @intFromEnum(special_heap_region.range.address),
-                special_heap_region.range.size.value,
+                @intFromEnum(special_heap_region.range.size),
             ) catch |err| {
                 std.debug.panic(
                     "failed to add special heap range to `special_heap_address_space_arena`: {t}",
@@ -422,7 +422,7 @@ pub const c = struct {
     pub fn mallocWithNonSizedFree(size: usize) ?[*]u8 {
         const full_size = core.Size.from(size, .byte).add(.of(cascade.KernelVirtualRange));
 
-        const mem = allocator.alignedAlloc(u8, standard_alignment, full_size.value) catch {
+        const mem = allocator.alignedAlloc(u8, standard_alignment, @intFromEnum(full_size)) catch {
             @branchHint(.unlikely);
             return null;
         };

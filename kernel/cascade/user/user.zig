@@ -77,7 +77,7 @@ fn syscallDebugPrint(
 
     while (!last_copy) {
         const bytes_to_copy: core.Size = .from(
-            @min(full_source.size.subtract(bytes_copied).value, writer.buffer.len - writer.end),
+            @min(@intFromEnum(full_source.size.subtract(bytes_copied)), writer.buffer.len - writer.end),
             .byte,
         );
 
@@ -89,7 +89,7 @@ fn syscallDebugPrint(
         bytes_copied.addInPlace(bytes_to_copy);
         last_copy = bytes_copied.greaterThanOrEqual(full_source.size);
 
-        writer.end += bytes_to_copy.value;
+        writer.end += @intFromEnum(bytes_to_copy);
 
         if (last_copy and writer.buffer[writer.end - 1] != '\n') {
             try writer.writeByte('\n');

@@ -177,7 +177,7 @@ const globals = struct {
     var graphical_output: ?Output = null;
     var serial_output: ?Output = null;
 
-    var writer_buffer: [arch.PageTable.standard_page_size.value]u8 = undefined;
+    var writer_buffer: [@intFromEnum(arch.PageTable.standard_page_size)]u8 = undefined;
 
     var writer: std.Io.Writer = .{
         .buffer = &globals.writer_buffer,
