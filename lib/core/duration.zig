@@ -26,6 +26,11 @@ pub const Duration = enum(u64) {
         return @enumFromInt(amount * @intFromEnum(unit));
     }
 
+    /// Returns the whole number of `unit` in `duration`.
+    pub fn whole(duration: Duration, unit: Unit) usize {
+        return @intFromEnum(duration) / @intFromEnum(unit);
+    }
+
     pub inline fn equal(duration: Duration, other: Duration) bool {
         return @intFromEnum(duration) == @intFromEnum(other);
     }
