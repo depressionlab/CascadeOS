@@ -32,12 +32,12 @@ pub const PageTable = extern struct {
     }
 
     inline fn zero(page_table: *PageTable) void {
-        @memset(page_table.entries(), .{ .value = 0 });
+        @memset(page_table.entries(), .zero);
     }
 
     fn isEmpty(page_table: *const PageTable) bool {
         for (page_table.entriesConst()) |entry| {
-            if (!entry.isZero()) return false;
+            if (entry != .zero) return false;
         }
         return true;
     }
@@ -94,7 +94,7 @@ pub const PageTable = extern struct {
             if (created_level3_table) {
                 var level4_entry = level4_entries[level4_index].load();
                 const address = level4_entry.getAddress4kib();
-                level4_entries[level4_index].zero();
+                level4_entries[level4_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(address));
             }
         }
@@ -110,7 +110,7 @@ pub const PageTable = extern struct {
             if (created_level2_table) {
                 var level3_entry = level3_entries[level3_index].load();
                 const address = level3_entry.getAddress4kib();
-                level3_entries[level3_index].zero();
+                level3_entries[level3_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(address));
             }
         }
@@ -125,7 +125,7 @@ pub const PageTable = extern struct {
             if (created_level1_table) {
                 var level2_entry = level2_entries[level2_index].load();
                 const address = level2_entry.getAddress4kib();
-                level2_entries[level2_index].zero();
+                level2_entries[level2_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(address));
             }
         }
@@ -188,7 +188,7 @@ pub const PageTable = extern struct {
             };
 
             defer if (top_level_decision == .free and level3_table.isEmpty()) {
-                level4_entries[level4_index].zero();
+                level4_entries[level4_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(level4_entry.getAddress4kib()));
             };
 
@@ -218,7 +218,7 @@ pub const PageTable = extern struct {
                 };
 
                 defer if (level2_table.isEmpty()) {
-                    level3_entries[level3_index].zero();
+                    level3_entries[level3_index] = .zero;
                     deallocate_page_list.prepend(.fromAddress(level3_entry.getAddress4kib()));
                 };
 
@@ -248,7 +248,7 @@ pub const PageTable = extern struct {
                     };
 
                     defer if (level1_table.isEmpty()) {
-                        level2_entries[level2_index].zero();
+                        level2_entries[level2_index] = .zero;
                         deallocate_page_list.prepend(.fromAddress(level2_entry.getAddress4kib()));
                     };
 
@@ -274,7 +274,7 @@ pub const PageTable = extern struct {
                             continue;
                         }
 
-                        level1_entries[level1_index].zero();
+                        level1_entries[level1_index] = .zero;
 
                         if (backing_page_decision == .free) {
                             deallocate_page_list.prepend(.fromAddress(level1_entry.getAddress4kib()));
@@ -1013,16 +1013,10 @@ const Entry = extern union {
 
     _raw: Raw,
 
-    const Raw = extern struct {
-        value: u64,
+    const Raw = enum(u64) {
+        zero = 0,
 
-        fn zero(raw: *volatile Raw) void {
-            raw.value = 0;
-        }
-
-        fn isZero(raw: *const volatile Raw) bool {
-            return raw.value == 0;
-        }
+        _,
 
         fn load(raw: *const volatile Raw) Entry {
             return .{ ._raw = raw.* };
@@ -1117,11 +1111,11 @@ const Entry = extern union {
     };
 
     fn zero(entry: *Entry) void {
-        entry._raw.zero();
+        entry._raw = .zero;
     }
 
     fn isZero(entry: Entry) bool {
-        return entry._raw.isZero();
+        return entry._raw == .zero;
     }
 
     fn getAddress4kib(entry: Entry) cascade.PhysicalAddress {
