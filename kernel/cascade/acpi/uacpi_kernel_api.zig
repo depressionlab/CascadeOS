@@ -364,7 +364,7 @@ export fn uacpi_kernel_log(uacpi_log_level: uacpi.LogLevel, c_msg: [*:0]const u8
 export fn uacpi_kernel_get_nanoseconds_since_boot() u64 {
     log.verbose("uacpi_kernel_get_nanoseconds_since_boot called", .{});
 
-    return cascade.time.wallclock.elapsed(.zero, cascade.time.wallclock.read()).value;
+    return @intFromEnum(cascade.time.wallclock.elapsed(.zero, cascade.time.wallclock.read()));
 }
 
 /// Spin for N microseconds.
