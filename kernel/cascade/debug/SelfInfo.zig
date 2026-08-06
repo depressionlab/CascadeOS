@@ -430,6 +430,6 @@ pub fn getDebugInfoAllocator() std.mem.Allocator {
 }
 
 const globals = struct {
-    var debug_info_allocator_backing: [core.Size.from(16, .mib).value]u8 = undefined; // TODO: figure out how big this need to be in debug/release safe
+    var debug_info_allocator_backing: [cascade.config.debug.size_of_debug_info_allocator.value]u8 = undefined;
     var debug_info_allocator: std.heap.FixedBufferAllocator = .init(&debug_info_allocator_backing);
 };

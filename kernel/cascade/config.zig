@@ -13,6 +13,8 @@ pub const debug = struct {
     ///
     /// This is used to align the output of logs.
     pub const max_log_scope_len = 14;
+
+    pub const size_of_debug_info_allocator: core.Size = .from(32, .mib); // TODO: figure out how big this needs to be in debug/release safe
 };
 
 pub const executor = struct {
