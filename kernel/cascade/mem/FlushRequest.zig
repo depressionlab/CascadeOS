@@ -60,7 +60,7 @@ pub fn submitAndWait(flush_request: FlushRequest) void {
 
     // TODO: spinloops are bad, we should have a `sync.Parker` on the `flush_request`
     while (state.count.load(.acquire) != 0) {
-        processFlushRequests();
+        arch.Executor.current.spinLoopHint();
     }
 }
 
