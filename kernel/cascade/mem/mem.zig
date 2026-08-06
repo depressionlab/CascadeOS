@@ -274,7 +274,7 @@ pub fn changeProtection(
     }
 }
 
-pub const safe = struct {
+pub const failable = struct {
     pub const MemcpyError = error{MemcpyFailed};
 
     /// Perform a copy from `args.source` to `args.destination`, if an unhandleable page fault occurs returns `error.MemcpyFailed`.
@@ -317,7 +317,7 @@ pub const safe = struct {
         current_task.task.safe_result_slot.set(&result);
         defer current_task.task.safe_result_slot.clear(&result);
 
-        arch.safeMemcpy(args.destination, args.source, &result.target);
+        arch.failableMemcpy(args.destination, args.source, &result.target);
 
         if (!result.successful) return error.MemcpyFailed;
     }

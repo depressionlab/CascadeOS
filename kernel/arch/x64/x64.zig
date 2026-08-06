@@ -32,7 +32,7 @@ pub const PrivilegeLevel = enum(u2) {
 /// Copies memory from `source` to `destination`.
 ///
 /// Sets `target` to the address any unhandleable page fault should return to after setting the result in the slot.
-pub fn safeMemcpy(
+pub fn failableMemcpy(
     destination: cascade.VirtualRange,
     source: cascade.VirtualRange,
     target: *cascade.KernelVirtualAddress,

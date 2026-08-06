@@ -81,7 +81,7 @@ fn syscallDebugPrint(
             .byte,
         );
 
-        try cascade.mem.safe.memcpy(.{
+        try cascade.mem.failable.memcpy(.{
             .destination = full_destination.subslice(.from(writer.end, .byte), bytes_to_copy),
             .source = full_source.subslice(bytes_copied, bytes_to_copy),
         });

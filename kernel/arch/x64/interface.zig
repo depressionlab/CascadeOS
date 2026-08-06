@@ -10,7 +10,7 @@ const core = @import("core");
 const x64 = @import("x64.zig");
 
 pub const functions: arch.Functions = .{
-    .safeMemcpy = x64.safeMemcpy,
+    .failableMemcpy = x64.failableMemcpy,
 
     .executor = .{
         .flushRequestNotify = x64.Executor.flushRequestNotify,

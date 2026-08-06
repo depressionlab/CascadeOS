@@ -34,14 +34,14 @@ pub const cfi_prevent_unwinding = current_decls.cfi_prevent_unwinding;
 /// Copies memory from `source` to `destination`.
 ///
 /// Sets `target` to the address any unhandleable page fault should return to after setting the result in the slot.
-pub fn safeMemcpy(
+pub fn failableMemcpy(
     destination: cascade.VirtualRange,
     source: cascade.VirtualRange,
     target: *cascade.KernelVirtualAddress,
 ) callconv(core.inline_in_non_debug) void {
     getFunction(
         current_functions,
-        "safeMemcpy",
+        "failableMemcpy",
     )(destination, source, target);
 }
 
@@ -1019,7 +1019,7 @@ pub const Functions = struct {
     /// Copies memory from `source` to `destination`.
     ///
     /// Sets `target` to the address any unhandleable page fault should return to after setting the result in the slot.
-    safeMemcpy: ?fn (
+    failableMemcpy: ?fn (
         destination: cascade.VirtualRange,
         source: cascade.VirtualRange,
         target: *cascade.KernelVirtualAddress,
