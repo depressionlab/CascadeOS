@@ -51,8 +51,14 @@ pub fn tryWriteLock(rw_lock: *RwLock) bool {
         const state = @atomicLoad(usize, &rw_lock.state, .monotonic);
 
         if (state & READER_MASK == 0) {
-            _ = @atomicRmw(usize, &rw_lock.state, .Or, IS_WRITING, .acquire);
-            return true;
+            _ = @cmpxchgStrong(
+                usize,
+                &rw_lock.state,
+                state,
+                state | IS_WRITING,
+                .seq_cst,
+                .seq_cst,
+            ) orelse return true;
         }
 
         rw_lock.mutex.unlock();
