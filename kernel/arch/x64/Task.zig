@@ -59,7 +59,7 @@ pub fn prepareForScheduling(task: *cascade.Task, type_erased_call: *const core.T
     const impl = struct {
         fn taskEntryTrampoline() callconv(.naked) void {
             asm volatile (
-                \\.cfi_sections .debug_frame
+                \\.cfi_sections .eh_frame, .debug_frame
                 \\.cfi_undefined rip
                 \\
                 \\pop %rdi       // type_erased_call.typeErased
@@ -139,7 +139,7 @@ pub inline fn performSwitch(
     new_task: *cascade.Task,
 ) void {
     asm volatile (
-        \\.cfi_sections .debug_frame
+        \\.cfi_sections .eh_frame, .debug_frame
         \\
         \\lea 1f(%rip), %rax
         \\push %rax
@@ -192,7 +192,7 @@ pub inline fn performSwitch(
 pub inline fn performSwitchNoSave(new_task: *cascade.Task) noreturn {
     // no clobbers are listed as the calling context is abandoned
     asm volatile (
-        \\.cfi_sections .debug_frame
+        \\.cfi_sections .eh_frame, .debug_frame
         \\
         \\mov %[new_stack_pointer], %rsp
         \\.cfi_undefined rip
@@ -218,7 +218,7 @@ pub inline fn call(
     type_erased_call: *const core.TypeErasedCall,
 ) void {
     asm volatile (
-        \\.cfi_sections .debug_frame
+        \\.cfi_sections .eh_frame, .debug_frame
         \\
         \\lea 1f(%rip), %rax
         \\push %rax
@@ -277,7 +277,7 @@ pub inline fn callNoSave(
 ) noreturn {
     // no clobbers are listed as the calling context is abandoned
     asm volatile (
-        \\.cfi_sections .debug_frame
+        \\.cfi_sections .eh_frame, .debug_frame
         \\
         \\mov %[new_stack_pointer], %rsp
         \\.cfi_undefined rip

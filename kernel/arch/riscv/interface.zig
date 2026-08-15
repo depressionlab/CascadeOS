@@ -82,7 +82,7 @@ pub const decls: arch.Decls = .{
     ),
 
     .cfi_prevent_unwinding =
-    \\.cfi_sections .debug_frame
+    \\.cfi_sections .eh_frame, .debug_frame
     \\.cfi_undefined ra
     \\
     ,

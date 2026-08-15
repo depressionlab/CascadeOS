@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // SPDX-FileCopyrightText: CascadeOS Contributors
 
-.cfi_sections .debug_frame
+.cfi_sections .eh_frame, .debug_frame
 
 .extern interruptDispatch
 .set .HasError, 1

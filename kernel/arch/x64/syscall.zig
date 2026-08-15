@@ -34,7 +34,7 @@ export fn syscallDispatch(frame: *Frame) callconv(.c) void {
 
 pub fn entry() callconv(.naked) noreturn {
     asm volatile (std.fmt.comptimePrint(
-            \\.cfi_sections .debug_frame
+            \\.cfi_sections .eh_frame, .debug_frame
             \\
             \\.cfi_undefined %rip
             \\.cfi_undefined %rsp
