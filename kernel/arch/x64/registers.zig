@@ -251,7 +251,7 @@ pub const Cr3 = struct {
     pub inline fn writeAddress(address: cascade.PhysicalAddress) void {
         asm volatile ("mov %[address], %%cr3"
             :
-            : [address] "r" (address.value & 0xFFFF_FFFF_FFFF_F000),
+            : [address] "r" (@intFromEnum(address) & 0xFFFF_FFFF_FFFF_F000),
             : .{ .memory = true });
     }
 };

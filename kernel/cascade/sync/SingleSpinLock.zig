@@ -40,13 +40,20 @@ pub fn lock(single_spin_lock: *SingleSpinLock) void {
         @panic("recursive lock");
     }
 
-    while (single_spin_lock.holding_executor.cmpxchgWeak(
-        null,
-        current_executor,
-        .acquire,
-        .monotonic,
-    )) |_| {
-        arch.Executor.current.spinLoopHint();
+    while (true) {
+        while (single_spin_lock.holding_executor.load(.monotonic) != null) {
+            arch.Executor.current.spinLoopHint();
+        }
+
+        if (single_spin_lock.holding_executor.cmpxchgWeak(
+            null,
+            current_executor,
+            .acquire,
+            .monotonic,
+        ) == null) {
+            @branchHint(.likely);
+            return;
+        }
     }
 }
 

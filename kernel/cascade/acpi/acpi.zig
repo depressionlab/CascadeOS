@@ -18,8 +18,8 @@ pub fn rsdpTable() *const tables.RSDP {
 
 pub fn tryShutdown() !void {
     if (!globals.acpi_initialized) return;
-    try uacpi.prepareForSleep(.S5);
-    try uacpi.sleep(.S5);
+    try uacpi.simpleSleep(.S5);
+    unreachable;
 }
 
 const globals = struct {
@@ -41,7 +41,7 @@ pub const init = struct {
     /// NOP if ACPI is not present.
     pub fn earlyInitialize() !AcpiTablesHandle {
         const static = struct {
-            var buffer: [arch.PageTable.standard_page_size.value]u8 align(@sizeOf(usize)) = undefined;
+            var buffer: [@intFromEnum(arch.PageTable.standard_page_size)]u8 align(@sizeOf(usize)) = undefined;
         };
 
         const rsdp = switch (boot.rsdp() orelse return .{}) {

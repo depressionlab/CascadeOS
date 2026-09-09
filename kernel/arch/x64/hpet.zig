@@ -73,7 +73,7 @@ pub const init = struct {
     }
 
     fn referenceCounterWaitFor(duration: core.Duration) void {
-        const duration_ticks = ((duration.value * cascade.time.fs_per_ns) / globals.tick_duration_fs);
+        const duration_ticks = (@intFromEnum(duration) * cascade.time.fs_per_ns) / globals.tick_duration_fs;
 
         const current_value = globals.hpet.readCounterRegister();
 

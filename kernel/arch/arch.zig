@@ -10,7 +10,6 @@ const core = @import("core");
 const user_cascade = @import("user_cascade");
 
 pub const current_arch = @import("cascade_architecture").arch;
-pub const Arch = @TypeOf(current_arch);
 
 /// The range of the address space that is considered kernel memory.
 ///
@@ -35,14 +34,14 @@ pub const cfi_prevent_unwinding = current_decls.cfi_prevent_unwinding;
 /// Copies memory from `source` to `destination`.
 ///
 /// Sets `target` to the address any unhandleable page fault should return to after setting the result in the slot.
-pub fn safeMemcpy(
+pub fn failableMemcpy(
     destination: cascade.VirtualRange,
     source: cascade.VirtualRange,
     target: *cascade.KernelVirtualAddress,
 ) callconv(core.inline_in_non_debug) void {
     getFunction(
         current_functions,
-        "safeMemcpy",
+        "failableMemcpy",
     )(destination, source, target);
 }
 
@@ -373,8 +372,15 @@ pub const PageTable = struct {
     arch_specific: *current_decls.PageTable,
 
     /// The standard page size for the architecture.
+    ///
+    /// **Arch Requirements**:
+    ///  - Must be equal to the value of `user_cascade.page_size`.
     pub const standard_page_size: core.Size = current_decls.standard_page_size;
     pub const standard_page_size_alignment: std.mem.Alignment = standard_page_size.toAlignment();
+
+    comptime {
+        std.debug.assert(standard_page_size.equal(.from(user_cascade.page_size, .byte)));
+    }
 
     /// The largest page size supported by the architecture.
     pub const largest_page_size: core.Size = current_decls.largest_page_size;
@@ -526,7 +532,7 @@ pub const PageTable = struct {
             if (core.is_debug) {
                 const size = sizeOfTopLevelEntry();
                 std.debug.assert(range.size.equal(size));
-                std.debug.assert(range.address.aligned(.fromByteUnits(size.value)));
+                std.debug.assert(range.address.aligned(.fromByteUnits(@intFromEnum(size))));
             }
 
             return getFunction(
@@ -740,7 +746,7 @@ pub const Task = struct {
     ///  - Can only be called once.
     pub fn prepareForScheduling(
         task: *Task,
-        type_erased_call: core.TypeErasedCall,
+        type_erased_call: *const core.TypeErasedCall,
     ) callconv(core.inline_in_non_debug) void {
         return getFunction(
             current_functions.task,
@@ -804,10 +810,8 @@ pub const Task = struct {
     pub fn call(
         old_task: *Task,
         new_stack: *cascade.Task.Stack,
-        type_erased_call: core.TypeErasedCall,
+        type_erased_call: *const core.TypeErasedCall,
     ) callconv(core.inline_in_non_debug) void {
-        if (core.is_debug) std.debug.assert(type_erased_call.return_type.isNoReturn());
-
         getFunction(current_functions.task, "call")(
             @alignCast(@fieldParentPtr("arch_specific", old_task)),
             new_stack,
@@ -821,10 +825,8 @@ pub const Task = struct {
     ///  - `type_erased_call` must have a return type of `noreturn`.
     pub fn callNoSave(
         new_stack: *cascade.Task.Stack,
-        type_erased_call: core.TypeErasedCall,
+        type_erased_call: *const core.TypeErasedCall,
     ) callconv(core.inline_in_non_debug) noreturn {
-        if (core.is_debug) std.debug.assert(type_erased_call.return_type.isNoReturn());
-
         getFunction(current_functions.task, "callNoSave")(
             new_stack,
             type_erased_call,
@@ -1017,7 +1019,7 @@ pub const Functions = struct {
     /// Copies memory from `source` to `destination`.
     ///
     /// Sets `target` to the address any unhandleable page fault should return to after setting the result in the slot.
-    safeMemcpy: ?fn (
+    failableMemcpy: ?fn (
         destination: cascade.VirtualRange,
         source: cascade.VirtualRange,
         target: *cascade.KernelVirtualAddress,
@@ -1332,7 +1334,7 @@ pub const Functions = struct {
         /// ***Caller Requirements***:
         ///  - Must be called before the task is scheduled.
         ///  - Can only be called once.
-        prepareForScheduling: ?fn (task: *cascade.Task, type_erased_call: core.TypeErasedCall) void = null,
+        prepareForScheduling: ?fn (task: *cascade.Task, type_erased_call: *const core.TypeErasedCall) void = null,
 
         /// Called before `transition.old_task` is switched to `transition.new_task`.
         ///
@@ -1365,14 +1367,14 @@ pub const Functions = struct {
         call: ?fn (
             old_task: *cascade.Task,
             new_stack: *cascade.Task.Stack,
-            type_erased_call: core.TypeErasedCall,
+            type_erased_call: *const core.TypeErasedCall,
         ) callconv(.@"inline") void = null,
 
         /// Calls `type_erased_call` on `new_stack`.
         ///
         /// ***Caller Requirements***:
         ///  - `type_erased_call` must have a return type of `noreturn`.
-        callNoSave: ?fn (new_stack: *cascade.Task.Stack, type_erased_call: core.TypeErasedCall) callconv(.@"inline") noreturn = null,
+        callNoSave: ?fn (new_stack: *cascade.Task.Stack, type_erased_call: *const core.TypeErasedCall) callconv(.@"inline") noreturn = null,
     },
 
     pci: struct {
@@ -1475,6 +1477,9 @@ pub const Decls = struct {
     PageTable: type,
 
     /// The standard page size for the architecture.
+    ///
+    /// **Arch Requirements**:
+    ///  - Must be equal to the value of `user_cascade.page_size`.
     standard_page_size: core.Size,
 
     /// The largest page size supported by the architecture.

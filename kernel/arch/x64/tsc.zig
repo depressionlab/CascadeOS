@@ -73,7 +73,7 @@ pub const init = struct {
                             const current_value = readTsc();
 
                             const target_value = current_value +
-                                ((duration.value * cascade.time.fs_per_ns) / globals.tick_duration_fs);
+                                ((@intFromEnum(duration) * cascade.time.fs_per_ns) / globals.tick_duration_fs);
 
                             while (readTsc() < target_value) {}
                         }
@@ -121,7 +121,7 @@ pub const init = struct {
 
         const average_ticks = total_ticks / number_of_samples;
 
-        globals.tick_duration_fs = (sample_duration.value * cascade.time.fs_per_ns) / average_ticks;
+        globals.tick_duration_fs = (@intFromEnum(sample_duration) * cascade.time.fs_per_ns) / average_ticks;
         init_log.debug("tick duration (fs) using reference counter: {}", .{globals.tick_duration_fs});
     }
 

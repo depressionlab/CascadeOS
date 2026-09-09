@@ -175,7 +175,7 @@ pub const Reference = struct {
         const anonymous_map = reference.anonymous_map orelse unreachable;
 
         const target_index = targetIndex(entry, reference, faulting_address);
-        if (core.is_debug) std.debug.assert(target_index < anonymous_map.number_of_pages.count);
+        if (core.is_debug) std.debug.assert(target_index < @intFromEnum(anonymous_map.number_of_pages));
 
         return anonymous_map.anonymous_page_chunks.get(target_index);
     }
@@ -210,7 +210,7 @@ pub const Reference = struct {
         const anonymous_map = reference.anonymous_map orelse unreachable;
 
         const target_index = targetIndex(entry, reference, faulting_address);
-        if (core.is_debug) std.debug.assert(target_index < anonymous_map.number_of_pages.count);
+        if (core.is_debug) std.debug.assert(target_index < @intFromEnum(anonymous_map.number_of_pages));
 
         const chunk = anonymous_map.anonymous_page_chunks.ensureChunk(target_index) catch
             return error.OutOfMemory;
@@ -272,31 +272,32 @@ pub const Reference = struct {
     }
 };
 
-pub const PageCount = extern struct {
-    count: u32,
+pub const PageCount = enum(u32) {
+    zero = 0,
 
-    pub const zero: PageCount = .{ .count = 0 };
+    _,
 
     pub inline fn increment(page_count: *PageCount) void {
-        page_count.count += 1;
+        page_count.* = @enumFromInt(@intFromEnum(page_count.*) + 1);
     }
 
     pub fn increaseBySize(page_count: *PageCount, size: core.Size) void {
-        page_count.count += @intCast(size.divide(arch.PageTable.standard_page_size));
+        if (core.is_debug) std.debug.assert(size.alignForward(arch.PageTable.standard_page_size_alignment).equal(size));
+        const count: u32 = @intCast(size.divide(arch.PageTable.standard_page_size));
+        page_count.* = @enumFromInt(@intFromEnum(page_count.*) + count);
     }
 
     pub fn equal(page_count: PageCount, other: PageCount) bool {
-        return page_count.count == other.count;
+        return @intFromEnum(page_count) == @intFromEnum(other);
     }
 
     pub fn fromSize(size: core.Size) PageCount {
-        return .{
-            .count = @intCast(size.divide(arch.PageTable.standard_page_size)),
-        };
+        // TODO: why does `@enumFromInt` not provide a result type?
+        return @enumFromInt(@as(u32, @intCast(size.divide(arch.PageTable.standard_page_size))));
     }
 
     pub fn toSize(page_count: PageCount) core.Size {
-        return arch.PageTable.standard_page_size.multiplyScalar(page_count.count);
+        return arch.PageTable.standard_page_size.multiplyScalar(@intFromEnum(page_count));
     }
 };
 

@@ -81,7 +81,7 @@ pub fn reset(stack: *Stack) void {
 
 pub fn createStack() !Stack {
     const stack_range = globals.stack_arena.allocate(
-        stack_size_including_guard_page.value,
+        @intFromEnum(stack_size_including_guard_page),
         .instant_fit,
     ) catch return error.ItemConstructionFailed;
     errdefer globals.stack_arena.deallocate(stack_range);
@@ -145,15 +145,15 @@ pub const init = struct {
         try globals.stack_arena.init(
             .{
                 .name = try .fromSlice("stacks"),
-                .quantum = arch.PageTable.standard_page_size.value,
+                .quantum = @intFromEnum(arch.PageTable.standard_page_size),
             },
         );
 
         const stacks_region = cascade.mem.kernelRegions().find(.kernel_stacks) orelse unreachable;
 
         globals.stack_arena.addSpan(
-            stacks_region.range.address.value,
-            stacks_region.range.size.value,
+            @intFromEnum(stacks_region.range.address),
+            @intFromEnum(stacks_region.range.size),
         ) catch |err| {
             std.debug.panic("failed to add stack range to `stack_arena`: {t}", .{err});
         };

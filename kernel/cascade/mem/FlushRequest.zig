@@ -21,20 +21,14 @@ pub fn submitAndWait(flush_request: FlushRequest) void {
         return;
     }
 
-    const current_task: cascade.Task.Current = .get();
-    if (core.is_debug) {
-        // only when the bootstrap executor is running during early init will be in this function with interrupts disabled
-        // but that will trigger the above branch so will not reach here, so it is safe to assert interrupt enabled
-        std.debug.assert(current_task.task.interrupt_disable_count.load(.monotonic) == 0);
-        std.debug.assert(arch.Executor.current.interruptsEnabled());
-    }
-
     var state: State = .{
         .request = flush_request,
         .count = .init(all_executors.len - 1), // exclude current executor
     };
 
     {
+        const current_task: cascade.Task.Current = .get();
+
         current_task.incrementMigrationDisable();
         defer current_task.decrementMigrationDisable();
 
@@ -66,6 +60,10 @@ pub fn submitAndWait(flush_request: FlushRequest) void {
 
 pub fn processFlushRequests() void {
     const current_task: cascade.Task.Current = .get();
+
+    current_task.incrementInterruptDisable();
+    defer current_task.decrementInterruptDisable();
+
     const executor = current_task.knownExecutor();
 
     while (executor.flush_requests.popFirst()) |node| {

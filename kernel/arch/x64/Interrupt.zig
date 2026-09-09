@@ -328,7 +328,7 @@ pub const Interrupt = enum(u8) {
                 .call = .prepare(interrupt_handlers.pageFaultHandler, .{}),
             };
             globals.handlers[@intFromEnum(Interrupt.flush_request)] = .{
-                .eoi = .after,
+                .eoi = .before,
                 .call = .prepare(interrupt_handlers.flushRequestHandler, .{}),
             };
             globals.handlers[@intFromEnum(Interrupt.per_executor_periodic)] = .{

@@ -128,7 +128,7 @@ pub fn canMerge(first_entry: *const Entry, second_entry: *const Entry) bool {
         };
 
         const second_anonymous_map = second_entry.anonymous_map_reference.anonymous_map orelse {
-            if (first_anonymous_map.number_of_pages.count !=
+            if (@intFromEnum(first_anonymous_map.number_of_pages) !=
                 first_entry.anonymous_map_reference.start_offset
                     .add(first_entry.range.size)
                     .divide(arch.PageTable.standard_page_size))

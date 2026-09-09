@@ -10,7 +10,7 @@ const core = @import("core");
 const x64 = @import("x64.zig");
 
 pub const functions: arch.Functions = .{
-    .safeMemcpy = x64.safeMemcpy,
+    .failableMemcpy = x64.failableMemcpy,
 
     .executor = .{
         .flushRequestNotify = x64.Executor.flushRequestNotify,
@@ -113,7 +113,7 @@ pub const functions: arch.Functions = .{
             fn readPciU8(address: cascade.KernelVirtualAddress) u8 {
                 return asm volatile ("movb (%[address]), %[ret]"
                     : [ret] "={al}" (-> u8),
-                    : [address] "r" (address.value),
+                    : [address] "r" (address),
                 );
             }
         }.readPciU8,
@@ -121,7 +121,7 @@ pub const functions: arch.Functions = .{
             fn readPciU16(address: cascade.KernelVirtualAddress) u16 {
                 return asm volatile ("movw (%[address]), %[ret]"
                     : [ret] "={ax}" (-> u16),
-                    : [address] "r" (address.value),
+                    : [address] "r" (address),
                 );
             }
         }.readPciU16,
@@ -129,7 +129,7 @@ pub const functions: arch.Functions = .{
             fn readPciU32(address: cascade.KernelVirtualAddress) u32 {
                 return asm volatile ("movl (%[address]), %[ret]"
                     : [ret] "={eax}" (-> u32),
-                    : [address] "r" (address.value),
+                    : [address] "r" (address),
                 );
             }
         }.readPciU32,
@@ -137,7 +137,7 @@ pub const functions: arch.Functions = .{
             fn writePciU8(address: cascade.KernelVirtualAddress, value: u8) void {
                 asm volatile ("movb %[value], (%[address])"
                     :
-                    : [address] "r" (address.value),
+                    : [address] "r" (address),
                       [value] "{al}" (value),
                     : .{ .memory = true });
             }
@@ -146,7 +146,7 @@ pub const functions: arch.Functions = .{
             fn writePciU16(address: cascade.KernelVirtualAddress, value: u16) void {
                 asm volatile ("movw %[value], (%[address])"
                     :
-                    : [address] "r" (address.value),
+                    : [address] "r" (address),
                       [value] "{ax}" (value),
                     : .{ .memory = true });
             }
@@ -155,7 +155,7 @@ pub const functions: arch.Functions = .{
             fn writePciU32(address: cascade.KernelVirtualAddress, value: u32) void {
                 asm volatile ("movl %[value], (%[address])"
                     :
-                    : [address] "r" (address.value),
+                    : [address] "r" (address),
                       [value] "{eax}" (value),
                     : .{ .memory = true });
             }
@@ -204,7 +204,7 @@ pub const decls: arch.Decls = .{
     ),
 
     .cfi_prevent_unwinding =
-    \\.cfi_sections .debug_frame
+    \\.cfi_sections .eh_frame, .debug_frame
     \\.cfi_undefined rip
     \\
     ,

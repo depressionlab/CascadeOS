@@ -12,7 +12,7 @@ const core = @import("core");
 const x64 = @import("x64.zig");
 
 pub const PageTable = extern struct {
-    _entries: [number_of_entries]Entry.Raw align(small_page_size.value),
+    _entries: [number_of_entries]Entry.Raw align(@intFromEnum(small_page_size)),
 
     pub const number_of_entries = 512;
 
@@ -32,12 +32,12 @@ pub const PageTable = extern struct {
     }
 
     inline fn zero(page_table: *PageTable) void {
-        @memset(page_table.entries(), .{ .value = 0 });
+        @memset(page_table.entries(), .zero);
     }
 
     fn isEmpty(page_table: *const PageTable) bool {
         for (page_table.entriesConst()) |entry| {
-            if (!entry.isZero()) return false;
+            if (entry != .zero) return false;
         }
         return true;
     }
@@ -94,7 +94,7 @@ pub const PageTable = extern struct {
             if (created_level3_table) {
                 var level4_entry = level4_entries[level4_index].load();
                 const address = level4_entry.getAddress4kib();
-                level4_entries[level4_index].zero();
+                level4_entries[level4_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(address));
             }
         }
@@ -110,7 +110,7 @@ pub const PageTable = extern struct {
             if (created_level2_table) {
                 var level3_entry = level3_entries[level3_index].load();
                 const address = level3_entry.getAddress4kib();
-                level3_entries[level3_index].zero();
+                level3_entries[level3_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(address));
             }
         }
@@ -125,7 +125,7 @@ pub const PageTable = extern struct {
             if (created_level1_table) {
                 var level2_entry = level2_entries[level2_index].load();
                 const address = level2_entry.getAddress4kib();
-                level2_entries[level2_index].zero();
+                level2_entries[level2_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(address));
             }
         }
@@ -188,7 +188,7 @@ pub const PageTable = extern struct {
             };
 
             defer if (top_level_decision == .free and level3_table.isEmpty()) {
-                level4_entries[level4_index].zero();
+                level4_entries[level4_index] = .zero;
                 deallocate_page_list.prepend(.fromAddress(level4_entry.getAddress4kib()));
             };
 
@@ -218,7 +218,7 @@ pub const PageTable = extern struct {
                 };
 
                 defer if (level2_table.isEmpty()) {
-                    level3_entries[level3_index].zero();
+                    level3_entries[level3_index] = .zero;
                     deallocate_page_list.prepend(.fromAddress(level3_entry.getAddress4kib()));
                 };
 
@@ -248,7 +248,7 @@ pub const PageTable = extern struct {
                     };
 
                     defer if (level1_table.isEmpty()) {
-                        level2_entries[level2_index].zero();
+                        level2_entries[level2_index] = .zero;
                         deallocate_page_list.prepend(.fromAddress(level2_entry.getAddress4kib()));
                     };
 
@@ -274,7 +274,7 @@ pub const PageTable = extern struct {
                             continue;
                         }
 
-                        level1_entries[level1_index].zero();
+                        level1_entries[level1_index] = .zero;
 
                         if (backing_page_decision == .free) {
                             deallocate_page_list.prepend(.fromAddress(level1_entry.getAddress4kib()));
@@ -1013,16 +1013,10 @@ const Entry = extern union {
 
     _raw: Raw,
 
-    const Raw = extern struct {
-        value: u64,
+    const Raw = enum(u64) {
+        zero = 0,
 
-        fn zero(raw: *volatile Raw) void {
-            raw.value = 0;
-        }
-
-        fn isZero(raw: *const volatile Raw) bool {
-            return raw.value == 0;
-        }
+        _,
 
         fn load(raw: *const volatile Raw) Entry {
             return .{ ._raw = raw.* };
@@ -1117,38 +1111,38 @@ const Entry = extern union {
     };
 
     fn zero(entry: *Entry) void {
-        entry._raw.zero();
+        entry._raw = .zero;
     }
 
     fn isZero(entry: Entry) bool {
-        return entry._raw.isZero();
+        return entry._raw == .zero;
     }
 
     fn getAddress4kib(entry: Entry) cascade.PhysicalAddress {
-        return .{ .value = entry._address_4kib_aligned.readNoShiftFullSize() };
+        return @enumFromInt(entry._address_4kib_aligned.readNoShiftFullSize());
     }
 
     fn setAddress4kib(entry: *Entry, address: cascade.PhysicalAddress) void {
         if (core.is_debug) std.debug.assert(address.pageAligned());
-        entry._address_4kib_aligned.writeNoShiftFullSize(address.value);
+        entry._address_4kib_aligned.writeNoShiftFullSize(@intFromEnum(address));
     }
 
     fn getAddress2mib(entry: Entry) cascade.PhysicalAddress {
-        return .{ .value = entry._address_2mib_aligned.readNoShiftFullSize() };
+        return @enumFromInt(entry._address_2mib_aligned.readNoShiftFullSize());
     }
 
     fn setAddress2mib(entry: *Entry, address: cascade.PhysicalAddress) void {
         if (core.is_debug) std.debug.assert(address.aligned(medium_page_size_alignment));
-        entry._address_2mib_aligned.writeNoShiftFullSize(address.value);
+        entry._address_2mib_aligned.writeNoShiftFullSize(@intFromEnum(address));
     }
 
     fn getAddress1gib(entry: Entry) cascade.PhysicalAddress {
-        return .{ .value = entry._address_1gib_aligned.readNoShiftFullSize() };
+        return @enumFromInt(entry._address_1gib_aligned.readNoShiftFullSize());
     }
 
     fn setAddress1gib(entry: *Entry, address: cascade.PhysicalAddress) void {
         if (core.is_debug) std.debug.assert(address.aligned(large_page_size_alignment));
-        entry._address_1gib_aligned.writeNoShiftFullSize(address.value);
+        entry._address_1gib_aligned.writeNoShiftFullSize(@intFromEnum(address));
     }
 
     /// Gets the next page table level.

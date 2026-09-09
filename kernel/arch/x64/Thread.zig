@@ -74,7 +74,7 @@ pub const current = struct {
         x64_thread.extended_state.load();
 
         asm volatile (
-            \\.cfi_sections .debug_frame
+            \\.cfi_sections .eh_frame, .debug_frame
             \\
             \\mov %[frame], %rsp
             \\.cfi_undefined rip

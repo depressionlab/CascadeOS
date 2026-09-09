@@ -12,11 +12,11 @@ pub const std_options: std.Options = .{
     .log_level = cascade.debug.log.log_level.toStd(),
     .logFn = cascade.debug.log.stdLogImpl,
 
-    .page_size_min = arch.PageTable.standard_page_size.value,
-    .page_size_max = arch.PageTable.largest_page_size.value,
+    .page_size_min = @intFromEnum(arch.PageTable.standard_page_size),
+    .page_size_max = @intFromEnum(arch.PageTable.largest_page_size),
     .queryPageSize = struct {
         fn queryPageSize() usize {
-            return arch.PageTable.standard_page_size.value;
+            return @intFromEnum(arch.PageTable.standard_page_size);
         }
     }.queryPageSize,
 

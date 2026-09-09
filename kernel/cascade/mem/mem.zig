@@ -274,7 +274,7 @@ pub fn changeProtection(
     }
 }
 
-pub const safe = struct {
+pub const failable = struct {
     pub const MemcpyError = error{MemcpyFailed};
 
     /// Perform a copy from `args.source` to `args.destination`, if an unhandleable page fault occurs returns `error.MemcpyFailed`.
@@ -317,7 +317,7 @@ pub const safe = struct {
         current_task.task.safe_result_slot.set(&result);
         defer current_task.task.safe_result_slot.clear(&result);
 
-        arch.safeMemcpy(args.destination, args.source, &result.target);
+        arch.failableMemcpy(args.destination, args.source, &result.target);
 
         if (!result.successful) return error.MemcpyFailed;
     }
@@ -762,7 +762,7 @@ pub const init = struct {
         globals.kernel_virtual_offset = cascade.config.mem.kernel_base_address.difference(base_address.virtual);
 
         init_globals.kernel_physical_to_virtual_offset = core.Size.from(
-            base_address.virtual.value - base_address.physical.value,
+            @intFromEnum(base_address.virtual) - @intFromEnum(base_address.physical),
             .byte,
         );
 
@@ -796,8 +796,8 @@ pub const init = struct {
             init_log.debug("kernel memory offsets:", .{});
 
             init_log.debug("  virtual base address:       {f}", .{globals.virtual_base_address});
-            init_log.debug("  virtual offset:             0x{x:0>16}", .{globals.kernel_virtual_offset.value});
-            init_log.debug("  physical to virtual:        0x{x:0>16}", .{init_globals.kernel_physical_to_virtual_offset.value});
+            init_log.debug("  virtual offset:             0x{x:0>16}", .{@intFromEnum(globals.kernel_virtual_offset)});
+            init_log.debug("  physical to virtual:        0x{x:0>16}", .{@intFromEnum(init_globals.kernel_physical_to_virtual_offset)});
             init_log.debug("  direct map:                 {f}", .{globals.direct_map});
         }
     };
@@ -907,7 +907,7 @@ pub const init = struct {
 
             const virtual_range: cascade.KernelVirtualRange = .from(
                 start_address,
-                core.Size.from(end_address.value - start_address.value, .byte)
+                core.Size.from(@intFromEnum(end_address) - @intFromEnum(start_address), .byte)
                     .alignForward(arch.PageTable.standard_page_size_alignment),
             );
 
@@ -1057,7 +1057,7 @@ pub const init = struct {
                     kernel_page_table,
                     region.range.toVirtualRange(),
                     .from(
-                        .from(region.range.address.value - init_globals.kernel_physical_to_virtual_offset.value),
+                        .from(@intFromEnum(region.range.address) - @intFromEnum(init_globals.kernel_physical_to_virtual_offset)),
                         region.range.size,
                     ),
                     switch (region.type) {

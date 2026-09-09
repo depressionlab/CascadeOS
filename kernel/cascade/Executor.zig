@@ -25,7 +25,7 @@ flush_requests: core.containers.AtomicSinglyLinkedList = .{},
 
 // used during `cascade.debug.interruptSourcePanic`
 interrupt_source_panic_buffer: [
-    cascade.config.executor.interrupt_source_panic_buffer_size.value + interrupt_source_panic_truncated.len
+    @intFromEnum(cascade.config.executor.interrupt_source_panic_buffer_size) + interrupt_source_panic_truncated.len
 ]u8 = undefined,
 const interrupt_source_panic_truncated = " (msg truncated)";
 
@@ -46,11 +46,11 @@ pub fn renderInterruptSourcePanicMessage(
 
     const full_buffer = current_executor.interrupt_source_panic_buffer[0..];
 
-    var bw: std.Io.Writer = .fixed(full_buffer[0..cascade.config.executor.interrupt_source_panic_buffer_size.value]);
+    var bw: std.Io.Writer = .fixed(full_buffer[0..@intFromEnum(cascade.config.executor.interrupt_source_panic_buffer_size)]);
 
     bw.print(fmt, args) catch {
         @memcpy(
-            full_buffer[cascade.config.executor.interrupt_source_panic_buffer_size.value..],
+            full_buffer[@intFromEnum(cascade.config.executor.interrupt_source_panic_buffer_size)..],
             interrupt_source_panic_truncated,
         );
         return full_buffer;

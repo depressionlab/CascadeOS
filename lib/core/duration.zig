@@ -6,12 +6,11 @@ const std = @import("std");
 const core = @import("core");
 
 /// Represents a duration.
-pub const Duration = extern struct {
-    /// The duration in nanoseconds.
-    value: u64,
+pub const Duration = enum(u64) {
+    zero = 0,
+    one = 1,
 
-    pub const zero: Duration = .{ .value = 0 };
-    pub const one: Duration = .{ .value = 1 };
+    _,
 
     pub const Unit = enum(u64) {
         nanosecond = 1,
@@ -24,29 +23,32 @@ pub const Duration = extern struct {
     };
 
     pub fn from(amount: u64, unit: Unit) Duration {
-        return .{
-            .value = amount * @intFromEnum(unit),
-        };
+        return @enumFromInt(amount * @intFromEnum(unit));
+    }
+
+    /// Returns the whole number of `unit` in `duration`.
+    pub fn whole(duration: Duration, unit: Unit) usize {
+        return @intFromEnum(duration) / @intFromEnum(unit);
     }
 
     pub inline fn equal(duration: Duration, other: Duration) bool {
-        return duration.value == other.value;
+        return @intFromEnum(duration) == @intFromEnum(other);
     }
 
     pub inline fn lessThan(duration: Duration, other: Duration) bool {
-        return duration.value < other.value;
+        return @intFromEnum(duration) < @intFromEnum(other);
     }
 
     pub inline fn lessThanOrEqual(duration: Duration, other: Duration) bool {
-        return duration.value <= other.value;
+        return @intFromEnum(duration) <= @intFromEnum(other);
     }
 
     pub inline fn greaterThan(duration: Duration, other: Duration) bool {
-        return duration.value > other.value;
+        return @intFromEnum(duration) > @intFromEnum(other);
     }
 
     pub inline fn greaterThanOrEqual(duration: Duration, other: Duration) bool {
-        return duration.value >= other.value;
+        return @intFromEnum(duration) >= @intFromEnum(other);
     }
 
     pub fn compare(duration: Duration, other: Duration) std.math.Order {
@@ -56,58 +58,50 @@ pub const Duration = extern struct {
     }
 
     pub fn add(duration: Duration, other: Duration) Duration {
-        return .{ .value = duration.value + other.value };
+        return @enumFromInt(@intFromEnum(duration) + @intFromEnum(other));
     }
 
     pub fn addInPlace(duration: *Duration, other: Duration) void {
-        duration.value += other.value;
+        duration.* = @enumFromInt(@intFromEnum(duration.*) + @intFromEnum(other));
     }
 
     pub fn subtract(duration: Duration, other: Duration) Duration {
-        return .{ .value = duration.value - other.value };
+        return @enumFromInt(@intFromEnum(duration) - @intFromEnum(other));
     }
 
     pub fn subtractInPlace(duration: *Duration, other: Duration) void {
-        duration.value -= other.value;
-    }
-
-    pub fn multiply(duration: Duration, other: Duration) Duration {
-        return .{ .value = duration.value * other.value };
-    }
-
-    pub fn multiplyInPlace(duration: *Duration, other: Duration) void {
-        duration.value *= other.value;
+        duration.* = @enumFromInt(@intFromEnum(duration.*) - @intFromEnum(other));
     }
 
     pub fn multiplyScalar(duration: Duration, value: u64) Duration {
-        return .{ .value = duration.value * value };
+        return @enumFromInt(@intFromEnum(duration) * value);
     }
 
     pub fn multiplyScalarInPlace(duration: *Duration, value: u64) void {
-        duration.value *= value;
+        duration.* = @enumFromInt(@intFromEnum(duration.*) * value);
     }
 
     pub fn divide(duration: Duration, other: Duration) Duration {
-        return .{ .value = duration.value / other.value };
+        return @enumFromInt(@intFromEnum(duration) / @intFromEnum(other));
     }
 
     pub fn divideInPlace(duration: *Duration, other: Duration) void {
-        duration.value /= other.value;
+        duration.* = @enumFromInt(@intFromEnum(duration.*) / @intFromEnum(other));
     }
 
     pub fn divideScalar(duration: Duration, value: u64) Duration {
-        return .{ .value = duration.value / value };
+        return @enumFromInt(@intFromEnum(duration) / value);
     }
 
     pub fn divideScalarInPlace(duration: *Duration, value: u64) void {
-        duration.value /= value;
+        duration.* = @enumFromInt(@intFromEnum(duration.*) / value);
     }
 
     pub fn print(duration: Duration, writer: *std.Io.Writer, indent: usize) !void {
         _ = indent;
 
         var any_output = false;
-        var value = duration.value;
+        var value = @intFromEnum(duration);
 
         if (value == 0) {
             try writer.writeAll("0.000000000");
@@ -152,10 +146,6 @@ pub const Duration = extern struct {
 
     pub inline fn format(duration: Duration, writer: *std.Io.Writer) !void {
         return print(duration, writer, 0);
-    }
-
-    comptime {
-        core.testing.expectSize(Duration, .of(u64));
     }
 };
 

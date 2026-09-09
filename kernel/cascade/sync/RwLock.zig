@@ -51,8 +51,14 @@ pub fn tryWriteLock(rw_lock: *RwLock) bool {
         const state = @atomicLoad(usize, &rw_lock.state, .monotonic);
 
         if (state & READER_MASK == 0) {
-            _ = @atomicRmw(usize, &rw_lock.state, .Or, IS_WRITING, .acquire);
-            return true;
+            _ = @cmpxchgStrong(
+                usize,
+                &rw_lock.state,
+                state,
+                state | IS_WRITING,
+                .seq_cst,
+                .seq_cst,
+            ) orelse return true;
         }
 
         rw_lock.mutex.unlock();
@@ -148,7 +154,9 @@ pub fn readUnlock(rw_lock: *RwLock) void {
     if ((state & READER_MASK == READER) and (state & IS_WRITING != 0)) {
         rw_lock.wait_queue_spinlock.lock();
         defer rw_lock.wait_queue_spinlock.unlock();
-        rw_lock.wait_queue.wakeOne(&rw_lock.wait_queue_spinlock);
+
+        const task = rw_lock.wait_queue.pop(&rw_lock.wait_queue_spinlock) orelse return;
+        task.wakeFromBlocked();
     }
 }
 

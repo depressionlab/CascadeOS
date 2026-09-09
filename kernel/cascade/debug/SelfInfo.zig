@@ -163,7 +163,7 @@ fn getModule(si: *SelfInfo, gpa: std.mem.Allocator, address: usize) Error!*Modul
         @branchHint(.unlikely);
 
         const load_offset = if (boot.kernelBaseAddress()) |base_address|
-            cascade.config.mem.kernel_base_address.difference(base_address.virtual).value
+            @intFromEnum(cascade.config.mem.kernel_base_address.difference(base_address.virtual))
         else
             0;
 
@@ -187,11 +187,11 @@ fn getModule(si: *SelfInfo, gpa: std.mem.Allocator, address: usize) Error!*Modul
             switch (program_header.type) {
                 .load => try ranges.append(gpa, .{
                     .start = program_header.virtual_address.value + load_offset,
-                    .len = program_header.memory_size.value,
+                    .len = @intFromEnum(program_header.memory_size),
                 }),
                 .gnu_eh_frame => {
                     const segment_ptr: [*]const u8 = @ptrFromInt(load_offset + program_header.virtual_address.value);
-                    gnu_eh_frame = segment_ptr[0..program_header.memory_size.value];
+                    gnu_eh_frame = segment_ptr[0..@intFromEnum(program_header.memory_size)];
                 },
                 .note => {
                     std.debug.assert(program_header.file_size.equal(program_header.memory_size));
@@ -430,6 +430,6 @@ pub fn getDebugInfoAllocator() std.mem.Allocator {
 }
 
 const globals = struct {
-    var debug_info_allocator_backing: [core.Size.from(16, .mib).value]u8 = undefined; // TODO: figure out how big this need to be in debug/release safe
+    var debug_info_allocator_backing: [@intFromEnum(cascade.config.debug.size_of_debug_info_allocator)]u8 = undefined;
     var debug_info_allocator: std.heap.FixedBufferAllocator = .init(&debug_info_allocator_backing);
 };
